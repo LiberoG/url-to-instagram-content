@@ -2,6 +2,8 @@
 
 An AI automation built with **n8n** and the **Claude API**: paste a website URL, get back 5 ready-to-post Instagram captions written in that brand's actual voice — built as a hands-on exercise in Anthropic's [AI Fluency course](https://academy.claude.com/courses/ai-fluency-framework-foundations), specifically the **Description–Discernment loop**.
 
+![Workflow diagram](./workflow-diagram.png)
+
 ## What it does
 
 1. You submit a website URL through a simple form.

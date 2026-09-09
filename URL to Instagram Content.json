@@ -1,0 +1,310 @@
+{
+  "name": "URL to Instagram Content",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Generate Instagram Content",
+        "formDescription": "Enter a website URL to generate 5 Instagram posts written in that brand's voice.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Website URL",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c6c85aea-bdea-47b0-ab1b-3bc29dc56f01",
+      "name": "On form submission",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        -32,
+        -96
+      ],
+      "webhookId": "db1cb331-af6f-477b-be70-114cab986015"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json['Website URL'] }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          },
+          "timeout": 15000
+        }
+      },
+      "id": "624bc399-1e64-4585-8dab-09da8656fe84",
+      "name": "Fetch Website",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        208,
+        -96
+      ]
+    },
+    {
+      "parameters": {
+        "extractionValues": {
+          "values": [
+            {
+              "key": "bodyText",
+              "cssSelector": "body"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "4285df6c-022d-4d5d-8957-c0bdd8e76a31",
+      "name": "Extract Text",
+      "type": "n8n-nodes-base.htmlExtract",
+      "typeVersion": 1,
+      "position": [
+        448,
+        -96
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: \"claude-sonnet-5\", max_tokens: 1024, messages: [ { role: \"user\", content: \"Read this website text and summarize the brand's voice: overall tone, 3-5 key themes or messages, the likely target audience, and any distinctive style traits (word choice, sentence rhythm, emoji use, formality). Keep it concise and structured.\\n\\nWEBSITE TEXT:\\n\" + $json.bodyText.slice(0, 8000) } ] }) }}",
+        "options": {}
+      },
+      "id": "1569e77f-f9f9-42fe-a3d1-bc78653cdd2a",
+      "name": "Analyze Brand Voice",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        688,
+        -96
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "xNzYvSQ50I539Opw",
+          "name": "Anthropic API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const contentBlocks = $input.first().json.content;\nconst textBlock = contentBlocks.find(b => b.type === 'text');\nconst voiceProfile = textBlock ? textBlock.text : '';\nconst url = $('On form submission').first().json['Website URL'];\nreturn [{ json: { voiceProfile, url } }];"
+      },
+      "id": "8c531e60-acbc-4d8f-be71-c4b485ed04d5",
+      "name": "Parse Voice Profile",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        928,
+        -96
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: \"claude-opus-5\", max_tokens: 2048, messages: [ { role: \"user\", content: \"Using this brand voice profile, write 5 Instagram posts that match the brand's voice. Each post needs a caption and a short set of relevant hashtags.\\n\\nVary the structure and length across the 5 — don't repeat the same shape five times. For example: one short and punchy (2-3 lines total), one framed as a direct question to spark comments, one list or quick-tip style post, and the rest can use a fuller narrative style. Mix short and long captions across the set rather than keeping them uniform.\\n\\nAdd a few emojis naturally for warmth, used sparingly — not in every line, and not the same emoji repeated.\\n\\nSeparate the 5 posts clearly with '---'.\\n\\nBRAND VOICE PROFILE:\\n\" + $json.voiceProfile } ] }) }}",
+        "options": {}
+      },
+      "id": "015be6c6-ba52-45e3-b737-5c62c859f1e5",
+      "name": "Generate Posts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1168,
+        -96
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "xNzYvSQ50I539Opw",
+          "name": "Anthropic API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const contentBlocks = $input.first().json.content;\nconst textBlock = contentBlocks.find(b => b.type === 'text');\nconst postsText = textBlock ? textBlock.text : '';\nconst url = $('Parse Voice Profile').first().json.url;\nconst emailBody = `Instagram posts generated from: ${url}\\n\\n${postsText}`;\nreturn [{ json: { emailBody } }];"
+      },
+      "id": "10713610-a278-4a4e-af40-d79bbf865dc3",
+      "name": "Format Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1408,
+        -96
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.resend.com/emails",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ from: \"onboarding@resend.dev\", to: \"your-email@example.com\", subject: \"Your 5 Instagram posts are ready\", text: $json.emailBody }) }}",
+        "options": {}
+      },
+      "id": "00698386-a9a7-49e6-8dc1-190750713099",
+      "name": "Email Me the Posts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1648,
+        -96
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "wvVZuFn4GwHWnj3K",
+          "name": "Resend API"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Fetch Website",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Website": {
+      "main": [
+        [
+          {
+            "node": "Extract Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Text": {
+      "main": [
+        [
+          {
+            "node": "Analyze Brand Voice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze Brand Voice": {
+      "main": [
+        [
+          {
+            "node": "Parse Voice Profile",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Voice Profile": {
+      "main": [
+        [
+          {
+            "node": "Generate Posts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Posts": {
+      "main": [
+        [
+          {
+            "node": "Format Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Email": {
+      "main": [
+        [
+          {
+            "node": "Email Me the Posts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "2ce4a088-c6a7-4aaf-b6ca-62420f7c1d9f",
+  "meta": {
+    "instanceId": "bdc982c77b31850f34b0e9002904997f7784621f7010b973896f87636962a932"
+  },
+  "id": "p4DyQJL5AwHJ1OGf",
+  "tags": []
+}
